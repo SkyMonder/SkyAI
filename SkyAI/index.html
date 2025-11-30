@@ -2,63 +2,134 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>SkyAI - Минимальный пример</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkyAI Chat</title>
 <style>
-  body { font-family: sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-  #output { white-space: pre-wrap; background: #fff; padding: 10px; border-radius: 8px; width: 90%; max-width: 600px; height: 200px; overflow-y: auto; margin-top: 10px; }
-  #input { width: 90%; max-width: 600px; padding: 10px; font-size: 16px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc; }
-  button { margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; border: none; background: #007bff; color: white; }
-  button:disabled { background: #aaa; cursor: not-allowed; }
+  /* Стили для современного чата */
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    background: #162447;
+    padding: 1rem;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #e43f5a;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  }
+  #chat {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .message {
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    max-width: 70%;
+    word-wrap: break-word;
+  }
+  .user {
+    align-self: flex-end;
+    background: #e43f5a;
+    color: #fff;
+  }
+  .bot {
+    align-self: flex-start;
+    background: #162447;
+    color: #fff;
+    border: 1px solid #e43f5a;
+  }
+  footer {
+    display: flex;
+    padding: 0.5rem;
+    background: #0f3460;
+  }
+  input {
+    flex: 1;
+    padding: 0.7rem;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+  }
+  button {
+    margin-left: 0.5rem;
+    padding: 0.7rem 1rem;
+    border: none;
+    border-radius: 10px;
+    background: #e43f5a;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #ff6384;
+  }
 </style>
 </head>
 <body>
-<h1>SkyAI - Минимальный пример</h1>
-<input type="text" id="input" placeholder="Напиши что-нибудь..." />
-<button id="runBtn">Сгенерировать</button>
-<div id="output">Вывод модели появится здесь...</div>
+
+<header>🌌 SkyAI Chat</header>
+
+<div id="chat"></div>
+
+<footer>
+  <input type="text" id="input" placeholder="Напиши сообщение...">
+  <button id="send">Отправить</button>
+</footer>
 
 <script type="module">
-  // Проверяем WebGPU
-  if (!navigator.gpu) {
-    document.getElementById('output').innerText = "WebGPU не поддерживается в этом браузере 😢";
-    document.getElementById('runBtn').disabled = true;
+// Актуальный WebLLM CDN
+import { WebLLM } from 'https://cdn.jsdelivr.net/npm/webllm@latest/dist/webllm.module.js';
+
+// Инициализация WebLLM
+const model = new WebLLM({ model: 'gpt-3.5-turbo', device: 'cpu' });
+
+const chatContainer = document.getElementById('chat');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+
+function addMessage(text, type='bot') {
+  const div = document.createElement('div');
+  div.className = 'message ' + type;
+  div.textContent = text;
+  chatContainer.appendChild(div);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+  addMessage(text, 'user');
+  input.value = '';
+  
+  addMessage('...', 'bot'); // индикатор загрузки
+  const botDiv = chatContainer.querySelector('.bot:last-child');
+  
+  try {
+    const response = await model.chat([{ role: 'user', content: text }]);
+    botDiv.textContent = response.content;
+  } catch (e) {
+    botDiv.textContent = 'Ошибка: ' + e.message;
   }
+}
 
-  const outputEl = document.getElementById('output');
-  const inputEl = document.getElementById('input');
-  const runBtn = document.getElementById('runBtn');
+sendBtn.addEventListener('click', sendMessage);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
 
-  // Загрузка лёгкой модели через Hugging Face (WebLLM)
-  import { WebLLM } from 'https://cdn.jsdelivr.net/npm/webllm/dist/webllm.module.js';
-
-  let model;
-
-  async function loadModel() {
-    outputEl.innerText = "Загрузка модели, подождите...";
-    model = new WebLLM({
-      model: "gpt2", // минимальная модель для браузера
-      backend: "webgpu"
-    });
-    await model.init();
-    outputEl.innerText = "Модель загружена! Введите текст и нажмите 'Сгенерировать'.";
-  }
-
-  async function runModel() {
-    const prompt = inputEl.value;
-    if (!prompt) return;
-    outputEl.innerText = "Генерирую ответ...";
-    try {
-      const result = await model.generate(prompt, { maxTokens: 50 });
-      outputEl.innerText = result;
-    } catch (err) {
-      console.error(err);
-      outputEl.innerText = "Ошибка при генерации: " + err.message;
-    }
-  }
-
-  runBtn.addEventListener('click', runModel);
-
-  loadModel();
 </script>
+
 </body>
 </html>
