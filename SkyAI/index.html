@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>SkyAI — Бесплатная LLM в браузере</title>
+  <title>SkyAI — WebLLM in‑Browser</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: linear-gradient(135deg, #4f46e5, #9333ea); }
@@ -16,7 +16,7 @@
     <textarea id="prompt" class="w-full border p-3 rounded mb-4"
       rows="4" placeholder="Введите ваш запрос..."></textarea>
 
-    <button id="send" 
+    <button id="send"
       class="w-full bg-purple-700 text-white py-2 rounded-lg hover:bg-purple-800 transition">
       Отправить
     </button>
@@ -25,30 +25,56 @@
   </div>
 
   <script type="module">
-    import { GPT4All } from "https://cdn.jsdelivr.net/npm/gpt4all-js@1.2.0/dist/gpt4all.js";
+    import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
     const responseDiv = document.getElementById("response");
     const sendBtn = document.getElementById("send");
     const promptInput = document.getElementById("prompt");
 
-    responseDiv.textContent = "Загрузка модели SkyAI...";
+    async function init() {
+      responseDiv.textContent = "Проверка поддержи WebGPU...";
+      if (!navigator.gpu) {
+        responseDiv.textContent = "Ошибка: WebGPU не поддерживается в вашем браузере 😢";
+        return;
+      }
 
-    // Загружаем локальную модель GPT4All-J в браузер
-    const gpt = new GPT4All({
-      model: "https://gpt4all.io/models/gpt4all-lora-quantized.bin" // публичная модель
-    });
+      responseDiv.textContent = "Загрузка модели...";
 
-    await gpt.load();
-    responseDiv.textContent = "Модель загружена! Можете писать запрос.";
+      // Выбери модель из списка, поддерживаемых WebLLM
+      // Например: "Llama-3-1-B-Instruct-q4f32_1-MLC" — нужно проверить, доступна ли
+      const modelId = "Llama-3-1-B-Instruct-q4f32_1-MLC"; 
 
-    sendBtn.addEventListener("click", async () => {
-      const prompt = promptInput.value.trim();
-      if (!prompt) return;
-      responseDiv.textContent = "Генерация ответа...";
-      const reply = await gpt.generate(prompt);
-      responseDiv.textContent = reply;
-    });
+      let engine;
+      try {
+        engine = await CreateMLCEngine(modelId);
+      } catch (e) {
+        console.error("Ошибка при загрузке модели:", e);
+        responseDiv.textContent = "Не удалось загрузить модель — возможно, её нет в WebLLM.";
+        return;
+      }
+
+      responseDiv.textContent = "Модель загружена — можно писать запрос.";
+
+      sendBtn.disabled = false;
+
+      sendBtn.onclick = async () => {
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+
+        responseDiv.textContent = "Генерация ответа…";
+        try {
+          const resp = await engine.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+          });
+          responseDiv.textContent = resp.choices[0].message.content;
+        } catch (err) {
+          console.error("Ошибка при генерации:", err);
+          responseDiv.textContent = "Ошибка при генерации ответа.";
+        }
+      };
+    }
+
+    init();
   </script>
-
 </body>
 </html>
