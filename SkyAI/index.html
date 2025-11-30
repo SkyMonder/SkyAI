@@ -2,21 +2,15 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>SkyAI — WebLLM Llama 3.1</title>
+  <title>SkyAI — WebLLM (лёгкая модель)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background: linear-gradient(135deg, #4f46e5, #9333ea); }
-  </style>
+  <style>body{background:linear-gradient(135deg,#4f46e5,#9333ea)}</style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-6">
-
   <div class="bg-white w-full max-w-xl p-6 rounded-2xl shadow-xl">
     <h1 class="text-3xl font-bold text-center text-purple-700 mb-4">SkyAI</h1>
-
-    <textarea id="prompt" class="w-full border p-3 rounded mb-4" rows="4" placeholder="Введите ваш запрос..."></textarea>
-
+    <textarea id="prompt" class="w-full border p-3 rounded mb-4" rows="4" placeholder="Ваш запрос..."></textarea>
     <button id="send" class="w-full bg-purple-700 text-white py-2 rounded-lg hover:bg-purple-800 transition">Отправить</button>
-
     <div id="response" class="mt-4 p-3 bg-gray-100 rounded min-h-[100px] whitespace-pre-wrap"></div>
   </div>
 
@@ -30,34 +24,28 @@
     async function init() {
       respDiv.textContent = "Проверка WebGPU...";
       if (!navigator.gpu) {
-        respDiv.textContent = "Ошибка: WebGPU не поддерживается вашим браузером.";
-        btn.disabled = true;
+        respDiv.textContent = "WebGPU не поддерживается этим браузером.";
         return;
       }
 
-      const modelId = "Llama-3-1-B-Instruct-q4f32_1-MLC";
-
-      // Проверка наличия модели в списке WebLLM
+      const modelId = "Phi-3.5-mini-instruct-q4f32_1-MLC";
       if (!prebuiltAppConfig.model_list.some(m => m.model_id === modelId)) {
-        respDiv.textContent = "Модель недоступна в текущей версии WebLLM.";
-        btn.disabled = true;
+        respDiv.textContent = "Модель недоступна в WebLLM.";
         return;
       }
 
-      respDiv.textContent = "Загрузка модели, подождите...";
+      respDiv.textContent = "Загрузка модели...";
       let engine;
       try {
         engine = await CreateMLCEngine(modelId);
       } catch(e) {
-        console.error("Ошибка при загрузке модели:", e);
-        respDiv.textContent = "Не удалось загрузить модель.";
-        btn.disabled = true;
+        console.error(e);
+        respDiv.textContent = "Ошибка загрузки модели.";
         return;
       }
-
       respDiv.textContent = "Модель загружена — введите запрос.";
-      btn.disabled = false;
 
+      btn.disabled = false;
       btn.onclick = async () => {
         const p = prompt.value.trim();
         if (!p) return;
@@ -69,13 +57,12 @@
           respDiv.textContent = r.choices[0].message.content;
         } catch(err) {
           console.error(err);
-          respDiv.textContent = "Ошибка при генерации ответа.";
+          respDiv.textContent = "Ошибка при генерации.";
         }
       };
     }
 
     init();
   </script>
-
 </body>
 </html>
