@@ -1,68 +1,64 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>SkyAI — WebLLM (лёгкая модель)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>body{background:linear-gradient(135deg,#4f46e5,#9333ea)}</style>
+<meta charset="UTF-8">
+<title>SkyAI - Минимальный пример</title>
+<style>
+  body { font-family: sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+  #output { white-space: pre-wrap; background: #fff; padding: 10px; border-radius: 8px; width: 90%; max-width: 600px; height: 200px; overflow-y: auto; margin-top: 10px; }
+  #input { width: 90%; max-width: 600px; padding: 10px; font-size: 16px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc; }
+  button { margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; border: none; background: #007bff; color: white; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+</style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-6">
-  <div class="bg-white w-full max-w-xl p-6 rounded-2xl shadow-xl">
-    <h1 class="text-3xl font-bold text-center text-purple-700 mb-4">SkyAI</h1>
-    <textarea id="prompt" class="w-full border p-3 rounded mb-4" rows="4" placeholder="Ваш запрос..."></textarea>
-    <button id="send" class="w-full bg-purple-700 text-white py-2 rounded-lg hover:bg-purple-800 transition">Отправить</button>
-    <div id="response" class="mt-4 p-3 bg-gray-100 rounded min-h-[100px] whitespace-pre-wrap"></div>
-  </div>
+<body>
+<h1>SkyAI - Минимальный пример</h1>
+<input type="text" id="input" placeholder="Напиши что-нибудь..." />
+<button id="runBtn">Сгенерировать</button>
+<div id="output">Вывод модели появится здесь...</div>
 
-  <script type="module">
-    import { CreateMLCEngine, prebuiltAppConfig } from "https://esm.run/@mlc-ai/web-llm";
+<script type="module">
+  // Проверяем WebGPU
+  if (!navigator.gpu) {
+    document.getElementById('output').innerText = "WebGPU не поддерживается в этом браузере 😢";
+    document.getElementById('runBtn').disabled = true;
+  }
 
-    const respDiv = document.getElementById("response");
-    const btn = document.getElementById("send");
-    const prompt = document.getElementById("prompt");
+  const outputEl = document.getElementById('output');
+  const inputEl = document.getElementById('input');
+  const runBtn = document.getElementById('runBtn');
 
-    async function init() {
-      respDiv.textContent = "Проверка WebGPU...";
-      if (!navigator.gpu) {
-        respDiv.textContent = "WebGPU не поддерживается этим браузером.";
-        return;
-      }
+  // Загрузка лёгкой модели через Hugging Face (WebLLM)
+  import { WebLLM } from 'https://cdn.jsdelivr.net/npm/webllm/dist/webllm.module.js';
 
-      const modelId = "Phi-3.5-mini-instruct-q4f32_1-MLC";
-      if (!prebuiltAppConfig.model_list.some(m => m.model_id === modelId)) {
-        respDiv.textContent = "Модель недоступна в WebLLM.";
-        return;
-      }
+  let model;
 
-      respDiv.textContent = "Загрузка модели...";
-      let engine;
-      try {
-        engine = await CreateMLCEngine(modelId);
-      } catch(e) {
-        console.error(e);
-        respDiv.textContent = "Ошибка загрузки модели.";
-        return;
-      }
-      respDiv.textContent = "Модель загружена — введите запрос.";
+  async function loadModel() {
+    outputEl.innerText = "Загрузка модели, подождите...";
+    model = new WebLLM({
+      model: "gpt2", // минимальная модель для браузера
+      backend: "webgpu"
+    });
+    await model.init();
+    outputEl.innerText = "Модель загружена! Введите текст и нажмите 'Сгенерировать'.";
+  }
 
-      btn.disabled = false;
-      btn.onclick = async () => {
-        const p = prompt.value.trim();
-        if (!p) return;
-        respDiv.textContent = "Генерация ответа...";
-        try {
-          const r = await engine.chat.completions.create({
-            messages: [{ role: "user", content: p }]
-          });
-          respDiv.textContent = r.choices[0].message.content;
-        } catch(err) {
-          console.error(err);
-          respDiv.textContent = "Ошибка при генерации.";
-        }
-      };
+  async function runModel() {
+    const prompt = inputEl.value;
+    if (!prompt) return;
+    outputEl.innerText = "Генерирую ответ...";
+    try {
+      const result = await model.generate(prompt, { maxTokens: 50 });
+      outputEl.innerText = result;
+    } catch (err) {
+      console.error(err);
+      outputEl.innerText = "Ошибка при генерации: " + err.message;
     }
+  }
 
-    init();
-  </script>
+  runBtn.addEventListener('click', runModel);
+
+  loadModel();
+</script>
 </body>
 </html>
