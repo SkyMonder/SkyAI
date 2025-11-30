@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>SkyAI — WebLLM in‑Browser</title>
+  <title>SkyAI — WebLLM Mistral 7B</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: linear-gradient(135deg, #4f46e5, #9333ea); }
@@ -13,68 +13,69 @@
   <div class="bg-white w-full max-w-xl p-6 rounded-2xl shadow-xl">
     <h1 class="text-3xl font-bold text-center text-purple-700 mb-4">SkyAI</h1>
 
-    <textarea id="prompt" class="w-full border p-3 rounded mb-4"
-      rows="4" placeholder="Введите ваш запрос..."></textarea>
+    <textarea id="prompt" class="w-full border p-3 rounded mb-4" rows="4" placeholder="Введите ваш запрос..."></textarea>
 
-    <button id="send"
-      class="w-full bg-purple-700 text-white py-2 rounded-lg hover:bg-purple-800 transition">
-      Отправить
-    </button>
+    <button id="send" class="w-full bg-purple-700 text-white py-2 rounded-lg hover:bg-purple-800 transition">Отправить</button>
 
     <div id="response" class="mt-4 p-3 bg-gray-100 rounded min-h-[100px] whitespace-pre-wrap"></div>
   </div>
 
   <script type="module">
-    import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+    import { CreateMLCEngine, prebuiltAppConfig } from "https://esm.run/@mlc-ai/web-llm";
 
-    const responseDiv = document.getElementById("response");
-    const sendBtn = document.getElementById("send");
-    const promptInput = document.getElementById("prompt");
+    const respDiv = document.getElementById("response");
+    const btn = document.getElementById("send");
+    const prompt = document.getElementById("prompt");
 
     async function init() {
-      responseDiv.textContent = "Проверка поддержи WebGPU...";
+      respDiv.textContent = "Проверка WebGPU...";
       if (!navigator.gpu) {
-        responseDiv.textContent = "Ошибка: WebGPU не поддерживается в вашем браузере 😢";
+        respDiv.textContent = "Ошибка: WebGPU не поддерживается вашим браузером.";
+        btn.disabled = true;
         return;
       }
 
-      responseDiv.textContent = "Загрузка модели...";
+      const modelId = "Mistral-7B-Instruct-v0.3-q4f32_1-MLC";
 
-      // Выбери модель из списка, поддерживаемых WebLLM
-      // Например: "Llama-3-1-B-Instruct-q4f32_1-MLC" — нужно проверить, доступна ли
-      const modelId = "Llama-3-1-B-Instruct-q4f32_1-MLC"; 
+      // Проверка наличия модели в списке WebLLM
+      if (!prebuiltAppConfig.model_list.some(m => m.model_id === modelId)) {
+        respDiv.textContent = "Модель недоступна в текущей версии WebLLM.";
+        btn.disabled = true;
+        return;
+      }
 
+      respDiv.textContent = "Загрузка модели...";
       let engine;
       try {
         engine = await CreateMLCEngine(modelId);
-      } catch (e) {
+      } catch(e) {
         console.error("Ошибка при загрузке модели:", e);
-        responseDiv.textContent = "Не удалось загрузить модель — возможно, её нет в WebLLM.";
+        respDiv.textContent = "Не удалось загрузить модель.";
+        btn.disabled = true;
         return;
       }
 
-      responseDiv.textContent = "Модель загружена — можно писать запрос.";
+      respDiv.textContent = "Модель загружена — введите запрос.";
+      btn.disabled = false;
 
-      sendBtn.disabled = false;
-
-      sendBtn.onclick = async () => {
-        const prompt = promptInput.value.trim();
-        if (!prompt) return;
-
-        responseDiv.textContent = "Генерация ответа…";
+      btn.onclick = async () => {
+        const p = prompt.value.trim();
+        if (!p) return;
+        respDiv.textContent = "Генерация ответа...";
         try {
-          const resp = await engine.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
+          const r = await engine.chat.completions.create({
+            messages: [{ role: "user", content: p }]
           });
-          responseDiv.textContent = resp.choices[0].message.content;
-        } catch (err) {
-          console.error("Ошибка при генерации:", err);
-          responseDiv.textContent = "Ошибка при генерации ответа.";
+          respDiv.textContent = r.choices[0].message.content;
+        } catch(err) {
+          console.error(err);
+          respDiv.textContent = "Ошибка при генерации ответа.";
         }
       };
     }
 
     init();
   </script>
+
 </body>
 </html>
