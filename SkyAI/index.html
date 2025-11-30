@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>SkyAI — WebLLM Mistral 7B</title>
+  <title>SkyAI — WebLLM Llama 3.1</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: linear-gradient(135deg, #4f46e5, #9333ea); }
@@ -35,7 +35,7 @@
         return;
       }
 
-      const modelId = "Mistral-7B-Instruct-v0.3-q4f32_1-MLC";
+      const modelId = "Llama-3-1-B-Instruct-q4f32_1-MLC";
 
       // Проверка наличия модели в списке WebLLM
       if (!prebuiltAppConfig.model_list.some(m => m.model_id === modelId)) {
@@ -44,7 +44,7 @@
         return;
       }
 
-      respDiv.textContent = "Загрузка модели...";
+      respDiv.textContent = "Загрузка модели, подождите...";
       let engine;
       try {
         engine = await CreateMLCEngine(modelId);
