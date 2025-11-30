@@ -3,132 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SkyAI Chat</title>
+<title>SkyAI</title>
 <style>
-  /* Стили для современного чата */
   body {
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #1a1a2e;
+    font-family: 'Segoe UI', sans-serif;
+    background: #1e1e2f;
     color: #fff;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
     height: 100vh;
+    margin: 0;
+    padding: 20px;
   }
-  header {
-    background: #162447;
-    padding: 1rem;
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #e43f5a;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  h1 {
+    margin-bottom: 20px;
   }
   #chat {
+    width: 100%;
+    max-width: 600px;
     flex: 1;
-    padding: 1rem;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    margin-bottom: 10px;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 10px;
+    background: #2a2a3d;
   }
   .message {
-    padding: 0.8rem 1rem;
-    border-radius: 12px;
-    max-width: 70%;
-    word-wrap: break-word;
+    margin: 5px 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    max-width: 80%;
   }
   .user {
+    background: #4b79a1;
     align-self: flex-end;
-    background: #e43f5a;
-    color: #fff;
   }
-  .bot {
+  .ai {
+    background: #6b8e23;
     align-self: flex-start;
-    background: #162447;
-    color: #fff;
-    border: 1px solid #e43f5a;
   }
-  footer {
+  #inputForm {
+    width: 100%;
+    max-width: 600px;
     display: flex;
-    padding: 0.5rem;
-    background: #0f3460;
   }
-  input {
+  #userInput {
     flex: 1;
-    padding: 0.7rem;
-    border-radius: 10px;
+    padding: 10px;
+    border-radius: 10px 0 0 10px;
     border: none;
-    outline: none;
-    font-size: 1rem;
+    font-size: 16px;
   }
-  button {
-    margin-left: 0.5rem;
-    padding: 0.7rem 1rem;
+  #sendBtn {
+    padding: 10px 20px;
     border: none;
-    border-radius: 10px;
-    background: #e43f5a;
+    border-radius: 0 10px 10px 0;
+    background: #4b79a1;
     color: #fff;
-    font-weight: bold;
+    font-size: 16px;
     cursor: pointer;
   }
-  button:hover {
-    background: #ff6384;
+  #sendBtn:hover {
+    background: #3a5d7b;
   }
 </style>
 </head>
 <body>
 
-<header>🌌 SkyAI Chat</header>
-
+<h1>SkyAI</h1>
 <div id="chat"></div>
-
-<footer>
-  <input type="text" id="input" placeholder="Напиши сообщение...">
-  <button id="send">Отправить</button>
-</footer>
+<form id="inputForm">
+  <input type="text" id="userInput" placeholder="Напиши сообщение..." autocomplete="off"/>
+  <button type="submit" id="sendBtn">Отправить</button>
+</form>
 
 <script type="module">
-// Актуальный WebLLM CDN
 import { WebLLM } from 'https://cdn.jsdelivr.net/npm/webllm@latest/dist/webllm.module.js';
 
-// Инициализация WebLLM
-const model = new WebLLM({ model: 'gpt-3.5-turbo', device: 'cpu' });
+const chat = document.getElementById('chat');
+const form = document.getElementById('inputForm');
+const input = document.getElementById('userInput');
 
-const chatContainer = document.getElementById('chat');
-const input = document.getElementById('input');
-const sendBtn = document.getElementById('send');
+const model = new WebLLM({
+  model: 'ggml-alpaca-7b-q4.bin', // пример, можно выбрать любой доступный
+  backend: 'cpu'
+});
 
-function addMessage(text, type='bot') {
+function addMessage(text, sender) {
   const div = document.createElement('div');
-  div.className = 'message ' + type;
+  div.className = 'message ' + sender;
   div.textContent = text;
-  chatContainer.appendChild(div);
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
 }
 
-async function sendMessage() {
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
   const text = input.value.trim();
   if (!text) return;
   addMessage(text, 'user');
   input.value = '';
   
-  addMessage('...', 'bot'); // индикатор загрузки
-  const botDiv = chatContainer.querySelector('.bot:last-child');
-  
+  addMessage('...', 'ai');
+  const aiDiv = chat.querySelector('.ai:last-child');
+
   try {
-    const response = await model.chat([{ role: 'user', content: text }]);
-    botDiv.textContent = response.content;
-  } catch (e) {
-    botDiv.textContent = 'Ошибка: ' + e.message;
+    const response = await model.generate(text, {
+      max_new_tokens: 150
+    });
+    aiDiv.textContent = response;
+  } catch (err) {
+    aiDiv.textContent = 'Ошибка AI: ' + err.message;
+    console.error(err);
   }
-}
-
-sendBtn.addEventListener('click', sendMessage);
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') sendMessage();
 });
-
 </script>
 
 </body>
